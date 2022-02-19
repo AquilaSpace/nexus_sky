@@ -14,7 +14,7 @@ To run a local development server:
 Most files have a very light testing script below. All files should be run as a python module starting from root, eg:
 
 ```bash
-python -m src.models.Region
+python -m src.sky.test
 ```
 
 # Deployment
