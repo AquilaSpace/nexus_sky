@@ -151,6 +151,10 @@ def identify_close_approaches(
     last_time = start_time
 
     closest_approaches = []
+    
+    # When does the satellite enter and exit the tolerance
+    enter_and_exit = []
+    approached_within_tolerance = False
 
     for i in range(len(propagation_list)):
 
@@ -168,6 +172,16 @@ def identify_close_approaches(
         satellite = [ra * 180 / math.pi, dec * 180 / math.pi]
 
         distance = haversine(target, satellite)
+        
+        #print(distance)
+        
+        if distance < tolerance and not approached_within_tolerance and "approaching" and stop:
+            approached_within_tolerance = True
+            enter_and_exit.append(cur_time)
+            
+        elif distance > tolerance and last_status == "receding" and stop:
+            enter_and_exit.append(cur_time)
+        
         # Haversine distance
         if distance > last_approach and last_status == "approaching":
             # We've swapped
@@ -178,18 +192,113 @@ def identify_close_approaches(
                     [np.array(propagation_list[i][:3]), last_time, cur_time, distance]
                 )
             
-            if stop:
+            if stop and distance > tolerance:
                 break
 
         elif distance < last_approach and last_status == "receding":
             last_status = "approaching"
+                
+        
 
         last_approach = distance
         last_time = cur_time
 
-    return closest_approaches
+    return closest_approaches, enter_and_exit
 
+# TODO: Change all calls to async
 
+def main(state_vectors, location, threshold, target):
+    """
+    Identifies when satellites enter and exit the observing area, the time and distance of closes approach
+    As well as whether the satellite is sunlit within the window
+    
+    Provide state vectors for satellites from LeoLabs API, an observing location, an observing angular area (threshold)
+    And an observing target which is a right ascension and declination
+    """
+    
+    ts = load.timescale()
+    # Get state vectors
+    for state_vector in state_vectors["states"]:
+        # Get the state vector info and propagate it
+        state_id, state_catalog, sat_pos, sat_vel, start_time, uncertainty = get_state_info(state_vector)
+        propagation = propagate(sat_pos, sat_vel, step=60)
+        
+        close_approaches, _ = identify_close_approaches(
+            propagation, start_time, target, location, step=60, tolerance = threshold + 10
+        )
+    
+        # Could also break into occultation intervals
+    
+        # Get precise information about the approaches from LeoLabs
+        for close_approach in close_approaches:
+    
+            startTime = convert_to_utc_string(close_approach[1] - timedelta(seconds = 120))
+            endTime = convert_to_utc_string(close_approach[2] + timedelta(seconds = 120))
+            
+            # Logic, check if startTime and endTime are in observing window also check if they are sunlit
+    
+            # Make the api call
+            # Note, need to transition this to asynchronous calls
+    
+            url = f"https://api.leolabs.space/v1/catalog/objects/{state_catalog}/states/{state_id}/propagations?startTime={startTime}&endTime={endTime}&timestep=30"
+            resp = make_request(url)
+            data = resp.json()["propagation"]
+            
+            min_distance = 360
+            min_pos = []
+            min_vel = []
+            min_ts  = []
+            distances = []
+            
+            for point in data:
+                
+                timestamp = parser.parse(point["timestamp"])
+                t = ts.from_datetime(timestamp)
+    
+                sat_pos = np.array(point["position"])
+                sat_vel = np.array(point["velocity"])
+                location_pos = location.at(t).position.m
+    
+                diff = sat_pos - location_pos
+                _, dec, ra = to_spherical(diff)
+                satellite = [ra * 180 / math.pi, dec * 180 / math.pi]
+                distance = haversine(target, satellite)
+                
+                distances.append(distance)
+                
+                if distance < min_distance:
+                    min_distance = distance
+                    min_pos.append(sat_pos)
+                    min_vel.append(sat_vel)
+                    min_ts.append(timestamp)
+                else:
+                    break
+                
+                    
+            new_prop = []
+            if min_distance < threshold + 2:
+                # Propagate by hundredths of a second
+                new_prop = propagate(min_pos[-2], min_vel[-2], seconds=60, step=0.01)
+            
+            closest_approach, enter_and_exit = identify_close_approaches(
+                new_prop, min_ts[-2], target, location, step=0.01, tolerance = threshold, stop=True
+            )
+            
+            if len(closest_approach) > 0:
+                
+                closest_approach = closest_approach[0]
+    
+                print("Object: ", state_vector["catalogNumber"])
+                print(f"Enters observing area: ", str(enter_and_exit[0]))
+                print(f"Exits observing area: ", str(enter_and_exit[1]))
+                print("Time of closest approach: ", str(closest_approach[1]))
+                print("Angular separation (degrees) at closest approach: ", str(closest_approach[-1]))
+                print("Sunlit within window: ", is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1])))
+                print("\n")
+    
+    # Todo
+    return None
+                
 # After you've found the closest approaches just query LeoLabs to get a second-by-second report of the approach
 
 # Start with the Mt Kent Observatory
@@ -206,7 +315,7 @@ location = wgs84.latlon(
 dec_target = -69.7561
 ra_target = 75.39277
 
-# And we don't want the satellites to come within 12 degrees of the object
+# And we don't want the satellites to come within 2 degrees of the object
 
 target = [ra_target, dec_target]
 threshold = 2
@@ -216,141 +325,5 @@ url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L
 resp = make_request(url)
 state_vectors = resp.json()
 
-# TODO: Change all calls to async
 
-ts = load.timescale()
-# Get state vectors
-for state_vector in state_vectors["states"]:
-    # Get the state vector info and propagate it
-    state_id, state_catalog, sat_pos, sat_vel, start_time, uncertainty = get_state_info(state_vector)
-    propagation = propagate(sat_pos, sat_vel, step=60)
-    
-    close_approaches = identify_close_approaches(
-        propagation, start_time, target, location, step=60, tolerance = threshold + 10
-    )
-
-    # Could also break into occultation intervals
-
-    # Get precise information about the approaches from LeoLabs
-    for close_approach in close_approaches:
-
-        startTime = convert_to_utc_string(close_approach[1] - timedelta(seconds = 120))
-        endTime = convert_to_utc_string(close_approach[2] + timedelta(seconds = 120))
-        
-        # Logic, check if startTime and endTime are in observing window
-
-        # Make the api call
-        # Note, need to transition this to asynchronous calls
-
-        url = f"https://api.leolabs.space/v1/catalog/objects/{state_catalog}/states/{state_id}/propagations?startTime={startTime}&endTime={endTime}&timestep=30"
-        resp = make_request(url)
-        data = resp.json()["propagation"]
-        
-        min_distance = 360
-        min_pos = []
-        min_vel = []
-        min_ts  = []
-        distances = []
-        
-        for point in data:
-            
-            timestamp = parser.parse(point["timestamp"])
-            t = ts.from_datetime(timestamp)
-
-            sat_pos = np.array(point["position"])
-            sat_vel = np.array(point["velocity"])
-            location_pos = location.at(t).position.m
-
-            diff = sat_pos - location_pos
-            _, dec, ra = to_spherical(diff)
-            satellite = [ra * 180 / math.pi, dec * 180 / math.pi]
-            distance = haversine(target, satellite)
-            
-            distances.append(distance)
-            
-            if distance < min_distance:
-                min_distance = distance
-                min_pos.append(sat_pos)
-                min_vel.append(sat_vel)
-                min_ts.append(timestamp)
-            else:
-                break
-            
-                
-        new_prop = []
-        if min_distance < threshold + 2:
-            # Propagate by hundredths of a second
-            new_prop = propagate(min_pos[-2], min_vel[-2], seconds=60, step=0.01)
-        
-        closest_approach = identify_close_approaches(
-            new_prop, min_ts[-2], target, location, step=0.01, tolerance = threshold + 2, stop=True
-        )
-        
-        if len(closest_approach) > 0:
-            
-            closest_approach = closest_approach[0]
-
-            print("Object: ", state_vector["catalogNumber"])
-            
-            print("Time of closest approach: ", str(closest_approach[1]))
-            print("Angular separation (degrees) at closest approach: ", str(closest_approach[-1]))
-            print("Sunlit at closest approach: ", is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1])))
-            
-                
-            print("\n")
-
-
-state_id = state_vectors["states"][0]["id"]
-state_recorded = state_vectors["states"][0]["timestamp"]
-start_time = parser.parse(state_recorded)
-
-sat_pos = np.array(state_vectors["states"][0]["frames"]["EME2000"]["position"])
-sat_vel = np.array(state_vectors["states"][0]["frames"]["EME2000"]["velocity"])
-
-
-crude_arr = propagate(sat_pos, sat_vel, 86400)
-crude_arr = crude_arr[:, :3]
-
-endTime = state_recorded[:8] + "21" + state_recorded[10:]
-
-# Propagate from recorded state
-url = f"https://api.leolabs.space/v1/catalog/objects/L72/states/{state_id}/propagations?startTime={state_recorded}&endTime={endTime}&timestep=3600"
-resp = make_request(url)
-data = resp.json()
-
-exact_arr = []
-for dat in data["propagation"]:
-    exact_arr.append(dat["position"])
-
-exact_arr = np.array(exact_arr)
-
-# You can instead use ts.now() for the current time
-ts = load.timescale()
-t = ts.now()
-
-# Grab the position in coordinates
-coordinates_meters = location.at(t).position.m
-difference = sat_pos - coordinates_meters
-
-# Calculate apparent vector
-_, dec, ra = to_spherical(difference)
-
-# Convert to degrees
-dec, ra = dec * 180 / math.pi, ra * 180 / math.pi
-
-
-# Calculate difference in propagation
-difference = crude_arr[1] - location.at(t).position.m
-_, dec, ra = to_spherical(difference)
-dec, ra = dec * 180 / math.pi, ra * 180 / math.pi
-sat = dec, ra
-print(sat)
-
-# Exact propagation
-difference = exact_arr[1] - location.at(t).position.m
-_, dec, ra = to_spherical(difference)
-dec, ra = dec * 180 / math.pi, ra * 180 / math.pi
-target = dec, ra
-print(target)
-
-haversine(target, sat)
+main(state_vectors, location, threshold, target)
