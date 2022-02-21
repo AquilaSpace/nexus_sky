@@ -4,9 +4,8 @@
 import math
 from math import radians, cos, sin, asin, sqrt
 
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 
-import requests
 from requests.structures import CaseInsensitiveDict
 
 import numpy as np
@@ -14,21 +13,14 @@ import numpy as np
 # Skyfield initialisation
 from skyfield.api import load, wgs84
 
-from skyfield.jpllib import SPICESegment
-
 from scipy.integrate import odeint as ODEint
 from skyfield.functions import to_spherical
 from skyfield.positionlib import ICRF
-from skyfield.constants import ERAD
-
 from dateutil import parser
 
 # Asynchronous requests
 import aiohttp
-import asyncio
-
 import json
-
 
 # Note to self, right-ascension corresponds to longitude and declination corresponds to latitude on celestial sphere
 
@@ -337,4 +329,7 @@ url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L
 state_vectors = await make_request(url, session)
 
 
-main(state_vectors, location, threshold, target)
+await main(state_vectors, location, threshold, target)
+
+
+state_vector = state_vectors
