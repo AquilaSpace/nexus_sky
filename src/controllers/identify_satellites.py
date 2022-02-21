@@ -218,7 +218,7 @@ def identify_close_approaches(
 
     return closest_approaches, enter_and_exit
 
-async def main(state_vectors, location, threshold, target):
+async def main(state_vectors, location, threshold, target, time=86400):
     """
     Identifies when satellites enter and exit the observing area, the time and distance of closes approach
     As well as whether the satellite is sunlit within the window
@@ -233,7 +233,7 @@ async def main(state_vectors, location, threshold, target):
         for state_vector in state_vectors["states"]:
             # Get the state vector info and propagate it
             state_id, state_catalog, sat_pos, sat_vel, start_time, uncertainty = get_state_info(state_vector)
-            propagation = propagate(sat_pos, sat_vel, step=60)
+            propagation = propagate(sat_pos, sat_vel, step=60, seconds=time)
             
             close_approaches, _ = identify_close_approaches(
                 propagation, start_time, target, location, step=60, tolerance = threshold + 10
