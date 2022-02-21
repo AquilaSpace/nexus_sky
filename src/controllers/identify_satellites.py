@@ -140,7 +140,7 @@ def propagate(pos, vel, seconds=86400, step=600):
 
 
 def identify_close_approaches(
-    propagation_list, start_time, target, location, step=600, tolerance=60
+    propagation_list, start_time, target, location, step=600, tolerance=60, stop=False
 ):
     # Identify the periods where the closest approaches occurred and check whether within tolerance degrees
 
@@ -177,6 +177,9 @@ def identify_close_approaches(
                 closest_approaches.append(
                     [np.array(propagation_list[i][:3]), last_time, cur_time, distance]
                 )
+            
+            if stop:
+                break
 
         elif distance < last_approach and last_status == "receding":
             last_status = "approaching"
@@ -185,11 +188,6 @@ def identify_close_approaches(
         last_time = cur_time
 
     return closest_approaches
-
-def search_index_approaches(
-            
-        ):
-    pass
 
 
 # After you've found the closest approaches just query LeoLabs to get a second-by-second report of the approach
@@ -211,7 +209,7 @@ ra_target = 75.39277
 # And we don't want the satellites to come within 12 degrees of the object
 
 target = [ra_target, dec_target]
-threshold = 20
+threshold = 12
 
 # Retrieve state vectors for ISS
 url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
@@ -284,21 +282,21 @@ for state_vector in state_vectors["states"]:
             new_prop = propagate(min_pos[-2], min_vel[-2], seconds=60, step=0.01)
         
         closest_approach = identify_close_approaches(
-            new_prop, min_ts[-2], target, location, step=0.01, tolerance = threshold + 2
+            new_prop, min_ts[-2], target, location, step=0.01, tolerance = threshold + 2, stop=True
         )
         
-        print(state_vector["catalogNumber"])
-        print(closest_approach)
-        print(min_ts[-2], min_ts[-1])
-        print(distances[-2], distances[-1])
-        print(is_sunlit(np.array(min_pos[-1]), ts.from_datetime(min_ts[-1])),
-              is_sunlit(np.array(min_pos[-2]), ts.from_datetime(min_ts[-2])))
+        if len(closest_approach) > 0:
+            
+            closest_approach = closest_approach[0]
 
-            #if distance < threshold + 5:
-            #    print(timestamp, state_vector["catalogNumber"], distance, 
-            #          is_sunlit(np.array(sat_pos), t))
+            print("Object: ", state_vector["catalogNumber"])
+            
+            print("Time of closest approach: ", str(closest_approach[1]))
+            print("Angular separation (degrees) at closest approach: ", str(closest_approach[-1]))
+            print("Sunlit at closest approach: ", is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1])))
+            
                 
-        print("\n")
+            print("\n")
 
 
 state_id = state_vectors["states"][0]["id"]
