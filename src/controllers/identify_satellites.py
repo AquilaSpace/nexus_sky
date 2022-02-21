@@ -209,13 +209,14 @@ ra_target = 75.39277
 # And we don't want the satellites to come within 12 degrees of the object
 
 target = [ra_target, dec_target]
-threshold = 12
+threshold = 2
 
 # Retrieve state vectors for ISS
 url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
 resp = make_request(url)
 state_vectors = resp.json()
 
+# TODO: Change all calls to async
 
 ts = load.timescale()
 # Get state vectors
