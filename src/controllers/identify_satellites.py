@@ -129,7 +129,7 @@ def is_sunlit(position, time):
     # Need to use a VPS cloud like DigitalOcean (to read the file)
     halfpi, pi, twopi = [f*np.pi for f in (0.5, 1, 2)]
     degs, rads        = 180/pi, pi/180
-    Re                =   6378000.137
+    Re                =   6378000.137 # Radius of the earth
     
     Earth   = eph['earth']
     Sun     = eph['sun']
@@ -232,13 +232,15 @@ def identify_close_approaches(
 
     return closest_approaches, enter_and_exit
 
-async def main(state_vectors, location, threshold, target, time=86400):
+async def retrieve_close_approaches(state_vectors, location, threshold, target, time=86400):
     """
     Identifies when satellites enter and exit the observing area, the time and distance of closes approach
     As well as whether the satellite is sunlit within the window
     
     Provide state vectors for satellites from LeoLabs API, an observing location, an observing angular area (threshold)
     And an observing target which is a right ascension and declination
+    
+    Note: need to parallelize
     """
     responses = []
     
@@ -295,7 +297,7 @@ async def main(state_vectors, location, threshold, target, time=86400):
                     satellite = [ra * 180 / math.pi, dec * 180 / math.pi]
                     distance = haversine(target, satellite)
                     
-                    distances.append(distance)
+                    distances.append(distance) session
                     min_ts.append(timestamp)
                     if distance < min_distance:
                         min_distance = distance
@@ -310,7 +312,7 @@ async def main(state_vectors, location, threshold, target, time=86400):
                 if min_distance < threshold + 2:
                     # Propagate by hundredths of a second
                     new_prop = propagate(min_pos[-2], min_vel[-2], seconds=60, step=0.01)
-                
+                 session
                 closest_approach, enter_and_exit = identify_close_approaches(
                     new_prop, min_ts[-3], target, location, step=0.01, tolerance = threshold, stop=True
                 )
@@ -336,7 +338,8 @@ async def main(state_vectors, location, threshold, target, time=86400):
                     else:
                         response["begins_close_approach"] = str(min_ts[-3])
                         response["ends_close_approach"] = str(min_ts[-1])
-                    
+                            
+
                     response["closest_approach"] = str(closest_approach[1])
                     response["closest_separation"] = str(closest_approach[-1])
                     
@@ -373,3 +376,5 @@ url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L
 state_vectors = await make_request(url, session)
 
 await main(state_vectors, location, threshold, target)
+
+# Need to parallelize the fuck out of this

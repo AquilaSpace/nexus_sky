@@ -3,6 +3,10 @@
 import requests
 from requests.structures import CaseInsensitiveDict
 
+
+import aiohttp
+
+
 url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888"
 
 def make_request(url):
@@ -23,9 +27,9 @@ data = resp.json()
 Counting objects
 """
 
-# Let's do some counts
+# When you get access to the LeoLabs API, do this for every satellite
 # for 0 meters
-url = "https://api.leolabs.space/v1/catalog/objects"
+url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888"
 
 resp = await make_request(url, session)
 
@@ -40,23 +44,36 @@ def count_objects(data, min_rcs):
     print(count)
     return lis
 
-objs = count_objects(resp, 1)
+objs = count_objects(resp, 0)
 # TODO: Figure out minimum cross section
 # Ok so it looks like 0.1m^2 rcs is a good benchmark for minimum size
 
+earth_rad = 6378000.137
+
 import math
-def calculate_magnitude(objs):
+async def calculate_magnitude(objs):
     ar = []
-    for obj in objs:
-        # Calculate the distance above Earth
-        mag = -26.7 - 2.5 * math.log10(obj['rcs']) + 5.0 * math.log10(37700000)
-        ar.append(mag)
+    async with aiohttp.ClientSession() as session:
+        for obj in objs:
+            # Calculate the distance above Earth
+            item = {}
+            url = f"https://api.leolabs.space/v1/catalog/objects/{obj['catalogNumber']}/states?latest=true"
+            state_vector = await make_request(url, session)
+            state_vector = state_vector["states"][0]["frames"]["EME2000"]["position"]
+            
+            distance = (state_vector[0]**2 + state_vector[1]**2 + state_vector[2]**2)**0.5 
+            
+            mag = -26.7 - 2.5 * math.log10(obj['rcs']) + 5.0 * math.log10((distance - earth_rad))
+            item["catalog_number"] = obj["catalogNumber"]
+            item["estimated_magnitude"] = mag
+            ar.append(item)
     return ar
-    
+
+satellites = await calculate_magnitude(objs)
 
 
 import json
-json_string = json.dumps(data)
+json_string = json.dumps(satellites)
 
 with open('data.json', 'w') as outfile:
     json.dump(json_string, outfile)
@@ -167,6 +184,12 @@ Returns:
 
 """
 
+
+# Product idea. Generate the catalog and attach a peak magnitude to every object therein.
+# Astronomers can retrieve the information via API, and send in their data to be cleaned as well
+
+# Provide an API. Generate a key for each observatory which encodes it's location (lat, lon, elevation)
+# The key will be regenerated and resent to the observatory operator annually 
 
 
 
