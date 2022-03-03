@@ -277,15 +277,15 @@ async def main(state_vectors, location, threshold, target, time=86400):
                     distance = haversine(target, satellite)
                     
                     distances.append(distance)
-                    
+                    min_ts.append(timestamp)
                     if distance < min_distance:
                         min_distance = distance
                         min_pos.append(sat_pos)
                         min_vel.append(sat_vel)
-                        min_ts.append(timestamp)
                     else:
                         break
                     
+                # Check when it enters & exits the observing area
                         
                 new_prop = []
                 if min_distance < threshold + 2:
@@ -293,16 +293,30 @@ async def main(state_vectors, location, threshold, target, time=86400):
                     new_prop = propagate(min_pos[-2], min_vel[-2], seconds=60, step=0.01)
                 
                 closest_approach, enter_and_exit = identify_close_approaches(
-                    new_prop, min_ts[-2], target, location, step=0.01, tolerance = threshold, stop=True
+                    new_prop, min_ts[-3], target, location, step=0.01, tolerance = threshold, stop=True
                 )
                 
+                # Make sure this is functional
                 if len(closest_approach) > 0:
-                    
                     closest_approach = closest_approach[0]
         
-                    print("Object: ", state_vector["catalogNumber"])
-                    print(f"Enters observing area: ", str(enter_and_exit[0]))
-                    print(f"Exits observing area: ", str(enter_and_exit[1]))
+                    # Instead of this do estimated magnitude
+                    state_vector_number = state_vector["catalogNumber"]
+                    url = f"https://api.leolabs.space/v1/catalog/objects/{state_vector_number}"
+                    object_info = await make_request(url, session)
+                    # Currently we're just grabbing the radar cross section and hoping its informative
+                    # Estimate magnitude based on distance
+                    
+                    print("Object is of type: ", object_info["type"])
+                    print("Object has radar cross section: ", object_info["rcs"], " meters")
+                    
+                    if len(enter_and_exit) > 1:
+                        print(f"Enters observing area: ", str(enter_and_exit[0]))
+                        print(f"Exits observing area: ", str(enter_and_exit[1]))
+                    else:
+                        print("Object begins close approach (minute resolution): ", str(min_ts[-3]))
+                        print("Object ends close approach (minute resolution): ", str(min_ts[-1]))
+                    
                     print("Time of closest approach: ", str(closest_approach[1]))
                     print("Angular separation (degrees) at closest approach: ", str(closest_approach[-1]))
                     print("Sunlit within window: ", is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1])))
@@ -328,13 +342,11 @@ dec_target = -69.7561
 ra_target = 75.39277
 
 # And we don't want the satellites to come within 2 degrees of the object
-
 target = [ra_target, dec_target]
-threshold = 2
+threshold = 5
 
 # Retrieve state vectors for ISS
 url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
 state_vectors = await make_request(url, session)
 
-
-main(state_vectors, location, threshold, target)
+await main(state_vectors, location, threshold, target)
