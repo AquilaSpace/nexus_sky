@@ -22,6 +22,8 @@ from dateutil import parser
 import aiohttp
 import json
 
+from skyfield.api import Loader, EarthSatellite
+
 # Note to self, right-ascension corresponds to longitude and declination corresponds to latitude on celestial sphere
 
 # Ephemeris for determining if sunlit
@@ -125,10 +127,30 @@ def is_sunlit(position, time):
     True if sunlit, False if not
     """
     # Need to use a VPS cloud like DigitalOcean (to read the file)
-    pos_au = position * meters_to_au
-    pos_au = pos_au.tolist()
-    icrf = ICRF(position_au=position, t=time, center=399)  # 399 means ICRF
-    return icrf.is_sunlit(eph)
+    halfpi, pi, twopi = [f*np.pi for f in (0.5, 1, 2)]
+    degs, rads        = 180/pi, pi/180
+    Re                =   6378000.137
+    
+    Earth   = eph['earth']
+    Sun     = eph['sun']
+
+    sunpos = Sun.at(time).position.m
+    earthpos = Earth.at(time).position.m
+    satpos = earthpos + position
+    
+    sunearth, sunsat         = earthpos-sunpos, satpos-sunpos
+    sunearthnorm, sunsatnorm = [vec/np.sqrt((vec**2).sum(axis=0)) for vec in (sunearth, sunsat)]
+    angle = np.arccos((sunearthnorm * sunsatnorm).sum(axis=0))
+    
+    sunearthdistance = np.sqrt((sunearth**2).sum(axis=0))
+    
+    sunsatdistance = np.sqrt((sunsat**2).sum(axis=0))
+    limbangle        = np.arctan2(6378000.137, sunearthdistance)
+    
+    sunlit_bool = (angle > limbangle)
+    is_sunside = (sunsatdistance < sunearthdistance)
+
+    return sunlit_bool, is_sunside
 
 
 def deriv(X, t):
@@ -218,6 +240,7 @@ async def main(state_vectors, location, threshold, target, time=86400):
     Provide state vectors for satellites from LeoLabs API, an observing location, an observing angular area (threshold)
     And an observing target which is a right ascension and declination
     """
+    responses = []
     
     async with aiohttp.ClientSession() as session:
         ts = load.timescale()
@@ -235,6 +258,10 @@ async def main(state_vectors, location, threshold, target, time=86400):
         
             # Get precise information about the approaches from LeoLabs
             for close_approach in close_approaches:
+                # Check if on night-time side
+                _, is_sunside = is_sunlit(close_approach[0], ts.from_datetime(close_approach[1]))
+                if is_sunside:
+                    continue
         
                 startTime = convert_to_utc_string(close_approach[1] - timedelta(seconds = 120))
                 endTime = convert_to_utc_string(close_approach[2] + timedelta(seconds = 120))
@@ -291,8 +318,6 @@ async def main(state_vectors, location, threshold, target, time=86400):
                 # Make sure this is functional
                 if len(closest_approach) > 0:
                     closest_approach = closest_approach[0]
-                    
-                    print(closest_approach)
                     # Instead of this do estimated magnitude
                     state_vector_number = state_vector["catalogNumber"]
                     url = f"https://api.leolabs.space/v1/catalog/objects/{state_vector_number}"
@@ -303,23 +328,25 @@ async def main(state_vectors, location, threshold, target, time=86400):
                     difference = closest_approach[0] - location.at(t).position.m
                     mag = -26.7 - 2.5 * math.log10(object_info['rcs']) + 5.0 * math.log10(
                                                                                 np.linalg.norm(difference).item())
-                    
-                    print("Object will have estimated magnitude: ", mag)
+                    response = {}
                     
                     if len(enter_and_exit) > 1:
-                        print(f"Enters observing area: ", str(enter_and_exit[0]))
-                        print(f"Exits observing area: ", str(enter_and_exit[1]))
+                        response["enters_observing_area"] = str(enter_and_exit[0])
+                        response["exits_observing_area"] = str(enter_and_exit[1])
                     else:
-                        print("Object begins close approach (minute resolution): ", str(min_ts[-3]))
-                        print("Object ends close approach (minute resolution): ", str(min_ts[-1]))
+                        response["begins_close_approach"] = str(min_ts[-3])
+                        response["ends_close_approach"] = str(min_ts[-1])
                     
-                    print("Time of closest approach: ", str(closest_approach[1]))
-                    print("Angular separation (degrees) at closest approach: ", str(closest_approach[-1]))
-                    print("Sunlit within window: ", is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1])))
-                    print("\n")
-        
-        # Todo
-    return None
+                    response["closest_approach"] = str(closest_approach[1])
+                    response["closest_separation"] = str(closest_approach[-1])
+                    
+                    response["is_sunlit"] = is_sunlit(closest_approach[0], ts.from_datetime(closest_approach[1]))[0]
+                    if is_sunlit:
+                        response["estimated_magnitude"] = mag
+                    
+                    responses.append(response)
+    
+    return responses
                 
 # After you've found the closest approaches just query LeoLabs to get a second-by-second report of the approach
 
@@ -339,7 +366,7 @@ ra_target = 75.39277
 
 # And we don't want the satellites to come within 2 degrees of the object
 target = [ra_target, dec_target]
-threshold = 5
+threshold = 20
 
 # Retrieve state vectors for ISS
 url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
