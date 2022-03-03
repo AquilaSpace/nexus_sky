@@ -27,8 +27,7 @@ Counting objects
 # for 0 meters
 url = "https://api.leolabs.space/v1/catalog/objects"
 
-resp = make_request(url)
-data = resp.json()
+resp = await make_request(url, session)
 
 def count_objects(data, min_rcs):
     count = 0
@@ -41,9 +40,19 @@ def count_objects(data, min_rcs):
     print(count)
     return lis
 
-count_objects(data, 30)
+objs = count_objects(resp, 1)
 # TODO: Figure out minimum cross section
 # Ok so it looks like 0.1m^2 rcs is a good benchmark for minimum size
+
+import math
+def calculate_magnitude(objs):
+    ar = []
+    for obj in objs:
+        # Calculate the distance above Earth
+        mag = -26.7 - 2.5 * math.log10(obj['rcs']) + 5.0 * math.log10(37700000)
+        ar.append(mag)
+    return ar
+    
 
 
 import json

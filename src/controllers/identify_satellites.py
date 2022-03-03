@@ -299,16 +299,20 @@ async def main(state_vectors, location, threshold, target, time=86400):
                 # Make sure this is functional
                 if len(closest_approach) > 0:
                     closest_approach = closest_approach[0]
-        
+                    
+                    print(closest_approach)
                     # Instead of this do estimated magnitude
                     state_vector_number = state_vector["catalogNumber"]
                     url = f"https://api.leolabs.space/v1/catalog/objects/{state_vector_number}"
                     object_info = await make_request(url, session)
                     # Currently we're just grabbing the radar cross section and hoping its informative
                     # Estimate magnitude based on distance
+                    # Assume that actual cross section is 10x RCS
+                    difference = closest_approach[0] - location.at(t).position.m
+                    mag = -26.7 - 2.5 * math.log10(object_info['rcs']) + 5.0 * math.log10(
+                                                                                np.linalg.norm(difference).item())
                     
-                    print("Object is of type: ", object_info["type"])
-                    print("Object has radar cross section: ", object_info["rcs"], " meters")
+                    print("Object will have estimated magnitude: ", mag)
                     
                     if len(enter_and_exit) > 1:
                         print(f"Enters observing area: ", str(enter_and_exit[0]))
