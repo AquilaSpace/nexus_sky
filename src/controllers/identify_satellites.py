@@ -1,29 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
-import math
-
 # Grab ISS position
 # Skyfield initialisation
 from skyfield.api import load, wgs84
 
-from skyfield.functions import to_spherical
-from datetime import timedelta
-
 # Asynchronous and parellel requests
-import aiohttp
 from aiomultiprocess import Pool
 import multiprocessing as mp
 
-# Import helpers
-from src.utils.misc import (
-    haversine,
-    append_zero,
-    convert_to_utc_string,
-    deriv,
-    propagate,
-)
-from src.utils.satellite import analyse_state_vectors
+from src.controllers.satellite.state_vector import analyse_vectors
+
 from src.controllers.leolabs.requests import make_request
 
 async def retrieve_close_approaches(
@@ -44,6 +30,8 @@ async def retrieve_close_approaches(
         states = state_vectors["states"]
         
         arguments_map = []
+        
+        # TODO make multiprocessed 
         for state in states:
             arguments = {
                 "state_vector": state,
@@ -51,13 +39,13 @@ async def retrieve_close_approaches(
                 "threshold": threshold,
                 "target": target,
                 "time": time,
-                "ts": ts,
+                "ts": ts
             }
             arguments_map.append(arguments)
         
         
         async for response in pool.map(
-            analyse_state_vectors,
+            analyse_vectors,
             arguments_map
         ):
             if response:
@@ -84,7 +72,7 @@ if __name__ == "__main__":
 
     # And we don't want the satellites to come within 2 degrees of the object
     target = [ra_target, dec_target]
-    threshold = 5
+    threshold = 1
 
     # Retrieve state vectors for ISS
     url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
