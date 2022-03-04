@@ -29,7 +29,7 @@ Counting objects
 
 # When you get access to the LeoLabs API, do this for every satellite
 # for 0 meters
-url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888"
+url = "https://api.leolabs.space/v1/catalog/objects"
 
 resp = await make_request(url, session)
 
@@ -44,7 +44,8 @@ def count_objects(data, min_rcs):
     print(count)
     return lis
 
-objs = count_objects(resp, 0)
+
+objs = count_objects(resp, 0.0)
 # TODO: Figure out minimum cross section
 # Ok so it looks like 0.1m^2 rcs is a good benchmark for minimum size
 
