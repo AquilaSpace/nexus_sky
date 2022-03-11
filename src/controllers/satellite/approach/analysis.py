@@ -128,10 +128,10 @@ async def analyse_approach(arguments):
         catalog["closest_approach"] = str(closest_approach[1])
         catalog["closest_separation"] = str(closest_approach[-1])
 
-        catalog["is_sunlit"] = is_sunlit(
+        catalog["is_sunlit"] = int(is_sunlit(
             closest_approach[0], arguments["ts"].from_datetime(closest_approach[1])
-        )[0]
+        )[0])
         if is_sunlit:
-            catalog["estimated_magnitude"] = mag
+            catalog["estimated_magnitude"] = str(mag)
             
     return catalog

@@ -9,12 +9,27 @@ from src.controllers.leolabs.requests import make_request
 
 from skyfield.api import wgs84
 
+import json
+
+from ast import literal_eval
+
 satellite = Blueprint('item', __name__)
 
 logger = logging.getLogger(__name__)
 
 @satellite.route('/satellite/retrieve_passes/<key>', methods=['POST'])
 async def retrieve_passes(key):
+    """
+    For a given observatory accessible via "key", and a list of parameters including:
+    
+    catalog_objects: string of comma separated values of catalog identification numbers
+    target: [right_ascension, declination]
+    threshold: float, how close the satellites may pass to the target
+    time: int, how much time you're projecting into the future
+    
+    We retrieve a list of close passes for the provided satellites
+    """
+    
     data = request.json
     if not data:
         return jsonify({'status': 'failure', 'error': 'please provide a list of \
@@ -31,9 +46,8 @@ async def retrieve_passes(key):
             return jsonify({'status': 'failure', 'error': 'invalid key'})
         
         catalog_objects = data['catalog_objects']
-        threshold = data['threshold']
-        target = data['target']
-        
+        threshold = float(data['threshold'])
+        target = literal_eval(data['target'])
         time = data.get('time')
         
         
@@ -42,9 +56,9 @@ async def retrieve_passes(key):
         
         if time:
             response = await controllers.retrieve_close_approaches(state_vectors, location, 
-                                                               threshold, target, time)
+                                                               threshold, target, int(time))
         else:
-            response = await controllers.retrieve_close_approaches(state_vectors, location, threshold, target, time)
+            response = await controllers.retrieve_close_approaches(state_vectors, location, threshold, target)
             
     except Exception as e:
         logger.error(e)
