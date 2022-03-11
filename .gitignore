@@ -144,3 +144,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# These are where the keys are stored
+/src/controllers/leolabs
+/src/controllers/airtable

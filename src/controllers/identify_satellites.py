@@ -11,6 +11,7 @@ import multiprocessing as mp
 from src.controllers.satellite.state_vector import analyse_vectors
 
 from src.controllers.leolabs.requests import make_request
+from src.controllers.airtable.requests import get_observatories
 
 async def retrieve_close_approaches(
     state_vectors, location, threshold, target, time=86400
@@ -53,9 +54,17 @@ async def retrieve_close_approaches(
             
     return responses
 
+async def get_location(key):
+    """
+    Every observatory is assigned a key which is stored in an airtable
+    The key encodes its location (latitude, longitude, elevation)
+    """
+    api_key = "key7gI225gtX0jB8x"
+    
+
 # Test script
 if __name__ == "__main__":
-
+    """
     # Start with the Mt Kent Observatory
     latitude = -27.7977
     longitude = 151.8554
@@ -72,7 +81,7 @@ if __name__ == "__main__":
 
     # And we don't want the satellites to come within 2 degrees of the object
     target = [ra_target, dec_target]
-    threshold = 20
+    threshold = 1
 
     # Retrieve state vectors for ISS
     url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
@@ -86,3 +95,4 @@ if __name__ == "__main__":
     stop = timeit.default_timer()
     
     print('Time: ', stop - start)  
+    """
