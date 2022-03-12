@@ -6,4 +6,4 @@ Most logic is found in files within src/controllers. Feel free to browse through
 
 The basic idea is as follows:
 
-Given (a) An observatory location (b) An observing field (c) A time horizon, we query leolabs data---and using the returned state vectors---we zero in on exactly when and where satellites will interfere with observations.
+Given (a) An observatory location (b) An observing field (c) A time horizon, we query leolabs data---and using the returned state vectors---we propagate them across the time horizon and converge towards exactly when and where satellites will interfere with observations.
