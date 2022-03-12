@@ -17,6 +17,16 @@ satellite = Blueprint('satellite', __name__)
 
 logger = logging.getLogger(__name__)
 
+@satellite.route('satellite/retrieve_catalog', methods=['GET'])
+def retrieve_catalog():
+    """
+    Retrieve the catalog of satellites
+    """
+    with open('data.json') as data:
+        data = json.load(data)
+        return jsonify({'status': 'success', 'data': data}), 200
+
+
 @satellite.route('/satellite/retrieve_passes/<key>', methods=['POST'])
 async def retrieve_passes(key):
     """
