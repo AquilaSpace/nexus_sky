@@ -1,6 +1,6 @@
 # Nexus Sky Engine
 
-The nexus sky engine includes mathematical routines for determining when satellites will interfere with astronomy observations, and contains functionality to mitigate and minimize this inferference.
+The nexus sky engine includes mathematical routines for proactively identifying satellite for observatories, and allows for mitigating and minimizing this inferference.
 
 Most logic is found in files within src/controllers. Feel free to browse through them if you're curious how the sky engine functions internally.
 
