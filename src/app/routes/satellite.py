@@ -17,7 +17,7 @@ satellite = Blueprint('satellite', __name__)
 
 logger = logging.getLogger(__name__)
 
-@satellite.route('satellite/retrieve_catalog', methods=['GET'])
+@satellite.route('/satellite/retrieve_catalog', methods=['GET'])
 def retrieve_catalog():
     """
     Retrieve the catalog of satellites
