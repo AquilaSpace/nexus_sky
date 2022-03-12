@@ -13,7 +13,7 @@ import json
 
 from ast import literal_eval
 
-satellite = Blueprint('item', __name__)
+satellite = Blueprint('satellite', __name__)
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,6 @@ async def retrieve_passes(key):
     
     We retrieve a list of close passes for the provided satellites
     """
-    
     data = request.json
     if not data:
         return jsonify({'status': 'failure', 'error': 'please provide a list of \
@@ -44,22 +43,21 @@ async def retrieve_passes(key):
         if not location:
             # Return location could not be found
             return jsonify({'status': 'failure', 'error': 'invalid key'})
-        
+            
         catalog_objects = data['catalog_objects']
         threshold = float(data['threshold'])
         target = literal_eval(data['target'])
         time = data.get('time')
-        
-        
+            
         url = f"https://api.leolabs.space/v1/catalog/objects/{catalog_objects}/states?latest=true"
         state_vectors = await make_request(url)
-        
+            
         if time:
             response = await controllers.retrieve_close_approaches(state_vectors, location, 
-                                                               threshold, target, int(time))
+                                                                   threshold, target, int(time))
         else:
             response = await controllers.retrieve_close_approaches(state_vectors, location, threshold, target)
-            
+                
     except Exception as e:
         logger.error(e)
         return jsonify({'status': 'failure', 'error': e})

@@ -11,7 +11,8 @@ class WebServer:
         self.app = app
 
     def start(self):
-        self.app.run(port=6000)
+        with app.app_context():
+            self.app.run(port=6000)
 
 if __name__ == '__main__': 
     WebServer().start()
