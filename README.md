@@ -2,7 +2,7 @@
 
 The nexus sky engine includes mathematical routines for proactively identifying satellite for observatories, and allows for mitigating and minimizing this inferference.
 
-Most logic is found in files within src/controllers. Feel free to browse through them if you're curious how the sky engine functions internally.
+Basic logic is found in files within src/controllers. Detailed logic is contained within src/utils. Feel free to browse through these files if you're curious how the sky engine functions internally.
 
 The basic idea is as follows:
 
