@@ -54,6 +54,17 @@ async def retrieve_close_approaches(
             
     return responses
 
+async def validate_key(key):
+    """
+    Check a given key is present in the database
+    """
+    data = await get_observatories()
+    records = data['records']
+    for observatory in records:
+        if observatory['fields']['key'] == key:
+            return True
+    return False
+
 async def get_location(key):
     """
     Every observatory is assigned a key which is stored in an airtable
@@ -66,7 +77,6 @@ async def get_location(key):
             return wgs84.latlon(observatory['fields']['latitude'], observatory['fields']['longitude'], observatory['fields']['elevation'])
      
     return None
-    
 
 # Test script
 if __name__ == "__main__":

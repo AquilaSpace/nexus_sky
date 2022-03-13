@@ -17,14 +17,31 @@ satellite = Blueprint('satellite', __name__)
 
 logger = logging.getLogger(__name__)
 
-@satellite.route('/satellite/retrieve_catalog', methods=['GET'])
-def retrieve_catalog():
+@satellite.route('/satellite/retrieve_catalog/<key>', methods=['GET'])
+def retrieve_catalog(key):
     """
     Retrieve the catalog of satellites
     """
+    is_valid = controllers.validate_key(key)
+    if not is_valid:
+        return jsonify({'status': 'failure', 'error': 'invalid key'})
+    
+    if key=="test":
+        calibration_objects = ["L72","L335","L1159","L2669","L3226","L3969","L3972","L4884","L5011","L5429","L6888"]
+    
     with open('data.json') as data:
         data = json.load(data)
-        return jsonify({'status': 'success', 'data': data}), 200
+        if key != "test":
+            return jsonify({'status': 'success', 'data': data}), 200
+        
+        
+        pruned_list = []
+        json_data = json.loads(data)
+        for obj in json_data:
+            if obj['catalog_number'] in calibration_objects:
+                pruned_list.append(obj)
+        
+        return json.dumps(pruned_list)
 
 
 @satellite.route('/satellite/retrieve_passes/<key>', methods=['POST'])
@@ -55,6 +72,10 @@ async def retrieve_passes(key):
             return jsonify({'status': 'failure', 'error': 'invalid key'})
             
         catalog_objects = data['catalog_objects']
+        
+        if key=="test" and catalog_objects=="all":
+            catalog_objects = "L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888"
+        
         threshold = float(data['threshold'])
         target = literal_eval(data['target'])
         time = data.get('time')
