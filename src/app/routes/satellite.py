@@ -41,7 +41,7 @@ def retrieve_catalog(key):
             if obj['catalog_number'] in calibration_objects:
                 pruned_list.append(obj)
         
-        return json.dumps(pruned_list)
+        return jsonify({'status': 'success', 'data': json.dumps(pruned_list)}), 200
 
 
 @satellite.route('/satellite/retrieve_passes/<key>', methods=['POST'])
