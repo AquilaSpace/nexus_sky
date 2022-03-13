@@ -1,28 +1,9 @@
 # Nexus Sky Engine
 
-To run a local development server:
-```
-1. Place environment variables file (ask team) in project root and load
-2. Place GCP admin keys (ask team) in /keys directory
-3. (Optional) Create a virtual environment (preferably using venv)
-3. pip install -r requirements
-4. python main.py
-```
+The nexus sky engine includes mathematical routines for proactively identifying satellite for observatories, and allows for mitigating and minimizing this inferference.
 
-# Testing
+Basic logic is found in files within src/controllers. Detailed logic is contained within src/utils. Feel free to browse through these files if you're curious how the sky engine functions internally.
 
-Most files have a very light testing script below. All files should be run as a python module starting from root, eg:
+The basic idea is as follows:
 
-```bash
-python -m src.sky.test
-```
-
-# Deployment
-
-Run the deploy script (which configures the environment variables for deploy):
-
-```
-python deploy.py staging|prod
-```
-Then run the gcloud command it outputs
-
+Given (a) An observatory location (b) An observing field (c) A time horizon, we query leolabs data---and using the returned state vectors---we propagate them across the time horizon and converge towards exactly when and where satellites will interfere with observations.
