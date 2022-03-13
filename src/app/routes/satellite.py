@@ -18,11 +18,12 @@ satellite = Blueprint('satellite', __name__)
 logger = logging.getLogger(__name__)
 
 @satellite.route('/satellite/retrieve_catalog/<key>', methods=['GET'])
-def retrieve_catalog(key):
+async def retrieve_catalog(key):
     """
     Retrieve the catalog of satellites
     """
-    is_valid = controllers.validate_key(key)
+    is_valid = await controllers.validate_key(key)
+    print(is_valid)
     if not is_valid:
         return jsonify({'status': 'failure', 'error': 'invalid key'})
     
