@@ -111,6 +111,7 @@ async def analyse_approach(arguments):
         # Currently we're just using the radar cross section and hoping its informative, will reform over time
         # Estimate magnitude based on distance
         difference = closest_approach[0] - arguments["location"].at(t).position.m
+        # This is the formula for estimating magnitude for satellites in Earth orbit
         mag = (
             -26.7
             - 2.5 * math.log10(object_info["rcs"])
