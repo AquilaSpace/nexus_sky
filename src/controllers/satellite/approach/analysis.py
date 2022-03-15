@@ -108,9 +108,8 @@ async def analyse_approach(arguments):
         state_vector_number = arguments["state_vector"]["catalogNumber"]
         url = f"https://api.leolabs.space/v1/catalog/objects/{state_vector_number}"
         object_info = await make_request(url)  # , session)
-        # Currently we're just grabbing the radar cross section and hoping its informative
+        # Currently we're just using the radar cross section and hoping its informative, will reform over time
         # Estimate magnitude based on distance
-        # Assume that actual cross section is 10x RCS
         difference = closest_approach[0] - arguments["location"].at(t).position.m
         mag = (
             -26.7
