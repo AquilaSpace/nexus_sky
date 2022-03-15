@@ -77,38 +77,3 @@ async def get_location(key):
             return wgs84.latlon(observatory['fields']['latitude'], observatory['fields']['longitude'], observatory['fields']['elevation'])
      
     return None
-
-# Test script
-if __name__ == "__main__":
-    """
-    # Start with the Mt Kent Observatory
-    latitude = -27.7977
-    longitude = 151.8554
-    elevation = 682
-
-    location = wgs84.latlon(
-        latitude, longitude, elevation
-    )  # Location is mtkent observatory
-
-    # We're observing the LMC
-    # Note, convert to degrees before
-    dec_target = -69.7561
-    ra_target = 75.39277
-
-    # And we don't want the satellites to come within 2 degrees of the object
-    target = [ra_target, dec_target]
-    threshold = 1
-
-    # Retrieve state vectors for ISS
-    url = "https://api.leolabs.space/v1/catalog/objects/L72,L335,L1159,L2669,L3226,L3969,L3972,L4884,L5011,L5429,L6888/states?latest=true"
-    state_vectors = await make_request(url)  # , session)
-    import timeit
-
-    start = timeit.default_timer()
-    first_responses = await retrieve_close_approaches(
-        state_vectors, location, threshold, target
-    )
-    stop = timeit.default_timer()
-    
-    print('Time: ', stop - start)  
-    """
