@@ -17,7 +17,7 @@ async def retrieve_close_approaches(
     state_vectors, location, threshold, target, time=86400
 ):
     """
-    Identifies when satellites enter and exit the observing area, the time and distance of closes approach
+    Identifies when satellites enter and exit the observing area, the time and distance of closest approach
     As well as whether the satellite is sunlit within the window
     
     Provide state vectors for satellites from LeoLabs API, an observing location, an observing angular area (threshold)
