@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Grab ISS position
 # Skyfield initialisation
 from skyfield.api import load, wgs84
 
